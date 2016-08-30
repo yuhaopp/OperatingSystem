@@ -1,4 +1,5 @@
 
+<<<<<<< HEAD
 ; ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 ;                               boot.asm
 ; ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
@@ -6,6 +7,8 @@
 ; ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
 
+=======
+>>>>>>> origin/yuyifan
 ;%define	_BOOT_DEBUG_	; 做 Boot Sector 时一定将此行注释掉!将此行打开后用 nasm Boot.asm -o Boot.com 做成一个.COM文件易于调试
 
 %ifdef	_BOOT_DEBUG_
@@ -21,7 +24,12 @@ BaseOfStack		equ	0100h	; 调试状态下堆栈基地址(栈底, 从这个位置�
 BaseOfStack		equ	07c00h	; Boot状态下堆栈基地址(栈底, 从这个位置向低地址生长)
 %endif
 
+<<<<<<< HEAD
 %include	"load.inc"
+=======
+BaseOfLoader		equ	09000h	; LOADER.BIN 被加载到的位置 ----  段地址
+OffsetOfLoader		equ	0100h	; LOADER.BIN 被加载到的位置 ---- 偏移地址
+>>>>>>> origin/yuyifan
 ;================================================================================================
 
 	jmp short LABEL_START		; Start to boot.
@@ -30,7 +38,11 @@ BaseOfStack		equ	07c00h	; Boot状态下堆栈基地址(栈底, 从这个位置�
 ; 下面是 FAT12 磁盘的头, 之所以包含它是因为下面用到了磁盘的一些信息
 %include	"fat12hdr.inc"
 
+<<<<<<< HEAD
 LABEL_START:	
+=======
+LABEL_START:
+>>>>>>> origin/yuyifan
 	mov	ax, cs
 	mov	ds, ax
 	mov	es, ax
@@ -69,9 +81,15 @@ LABEL_SEARCH_IN_ROOT_DIR_BEGIN:
 	cld
 	mov	dx, 10h
 LABEL_SEARCH_FOR_LOADERBIN:
+<<<<<<< HEAD
 	cmp	dx, 0					; ┓循环次数控制,
 	jz	LABEL_GOTO_NEXT_SECTOR_IN_ROOT_DIR	; ┣如果已经读完了一个 Sector,
 	dec	dx					; ┛就跳到下一个 Sector
+=======
+	cmp	dx, 0										; ┓循环次数控制,
+	jz	LABEL_GOTO_NEXT_SECTOR_IN_ROOT_DIR	; ┣如果已经读完了一个 Sector,
+	dec	dx											; ┛就跳到下一个 Sector
+>>>>>>> origin/yuyifan
 	mov	cx, 11
 LABEL_CMP_FILENAME:
 	cmp	cx, 0
@@ -87,9 +105,15 @@ LABEL_GO_ON:
 	jmp	LABEL_CMP_FILENAME	;	继续循环
 
 LABEL_DIFFERENT:
+<<<<<<< HEAD
 	and	di, 0FFE0h		; else ┓	di &= E0 为了让它指向本条目开头
 	add	di, 20h			;      ┃
 	mov	si, LoaderFileName	;      ┣ di += 20h  下一个目录条目
+=======
+	and	di, 0FFE0h						; else ┓	di &= E0 为了让它指向本条目开头
+	add	di, 20h							;     ┃
+	mov	si, LoaderFileName					;     ┣ di += 20h  下一个目录条目
+>>>>>>> origin/yuyifan
 	jmp	LABEL_SEARCH_FOR_LOADERBIN;    ┛
 
 LABEL_GOTO_NEXT_SECTOR_IN_ROOT_DIR:

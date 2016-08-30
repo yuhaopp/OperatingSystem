@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 
 ; ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 ;                               kernel.asm
@@ -28,11 +29,17 @@ extern	gdt_ptr
 [SECTION .bss]
 StackSpace		resb	2 * 1024
 StackTop:		; 栈顶
+=======
+; 编译链接方法
+; $ nasm -f elf kernel.asm -o kernel.o
+; $ ld -s kernel.o -o kernel.bin    #‘-s’选项意为“strip all”
+>>>>>>> origin/yuyifan
 
 [section .text]	; 代码在此
 
 global _start	; 导出 _start
 
+<<<<<<< HEAD
 _start:
 	; 此时内存看上去是这样的（更详细的内存情况在 LOADER.ASM 中有说明）：
 	;              ┃                                    ┃
@@ -91,3 +98,10 @@ csinit:		; “这个跳转指令强制使用刚刚初始化的结构”——<<O
 	popfd	; Pop top of stack into EFLAGS
 
 	hlt
+=======
+_start:	; 跳到这里来的时候，我们假设 gs 指向显存
+	mov	ah, 0Fh				; 0000: 黑底    1111: 白字
+	mov	al, 'K'
+	mov	[gs:((80 * 1 + 39) * 2)], ax	; 屏幕第 1 行, 第 39 列
+	jmp	$
+>>>>>>> origin/yuyifan
