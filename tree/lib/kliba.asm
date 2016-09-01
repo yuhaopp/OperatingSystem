@@ -9,6 +9,7 @@
 ; 导入全局变量
 extern	disp_pos
 
+
 [SECTION .text]
 
 ; 导出函数
@@ -18,7 +19,7 @@ global	out_byte
 global	in_byte
 
 ; ========================================================================
-;                  void disp_str(char * pszInfo);
+;                  void disp_str(char * info);
 ; ========================================================================
 disp_str:
 	push	ebp
