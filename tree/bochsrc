@@ -10,7 +10,7 @@ romimage: file=/home/yuyifan/bochs-2.6.8/bios/BIOS-bochs-latest
 vgaromimage: file=/home/yuyifan/bochs-2.6.8/bios/VGABIOS-lgpl-latest
 
 # what disk images will be used
-floppya: 1_44=/home/yuyifan/a.img, status=inserted
+floppya: 1_44=a.img, status=inserted
 
 # choose the boot disk.
 boot: a

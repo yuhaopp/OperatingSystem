@@ -1,4 +1,3 @@
-<<<<<<< HEAD
 
 ; ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 ;                               loader.asm
@@ -6,14 +5,15 @@
 ;                                                     Forrest Yu, 2005
 ; ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
+
 org  0100h
 
 	jmp	LABEL_START		; Start
 
 ; 下面是 FAT12 磁盘的头, 之所以包含它是因为下面用到了磁盘的一些信息
-%include	"/home/yuyifan/fat12hdr.inc"
-%include	"/home/yuyifan/load.inc"
-%include	"/home/yuyifan/pm.inc"
+%include	"fat12hdr.inc"
+%include	"load.inc"
+%include	"pm.inc"
 
 
 ; GDT ------------------------------------------------------------------------------------------------------------------------------------------------------------
@@ -36,20 +36,6 @@ SelectorVideo		equ	LABEL_DESC_VIDEO	- LABEL_GDT + SA_RPL3
 
 
 BaseOfStack	equ	0100h
-=======
-org  0100h
-
-BaseOfStack		equ	0100h
-
-BaseOfKernelFile	equ	 08000h	; KERNEL.BIN 被加载到的位置 ----  段地址
-OffsetOfKernelFile	equ	     0h	; KERNEL.BIN 被加载到的位置 ---- 偏移地址
-
-
-	jmp	LABEL_START		; Start
-
-; 下面是 FAT12 磁盘的头, 之所以包含它是因为下面用到了磁盘的一些信息
-%include	"fat12hdr.inc"
->>>>>>> origin/yuyifan
 
 
 LABEL_START:			; <--- 从这里开始 *************
@@ -60,7 +46,6 @@ LABEL_START:			; <--- 从这里开始 *************
 	mov	sp, BaseOfStack
 
 	mov	dh, 0			; "Loading  "
-<<<<<<< HEAD
 	call	DispStrRealMode		; 显示字符串
 
 	; 得到内存数
@@ -93,28 +78,11 @@ LABEL_SEARCH_IN_ROOT_DIR_BEGIN:
 	mov	ax, BaseOfKernelFile
 	mov	es, ax			; es <- BaseOfKernelFile
 	mov	bx, OffsetOfKernelFile	; bx <- OffsetOfKernelFile	于是, es:bx = BaseOfKernelFile:OffsetOfKernelFile = BaseOfKernelFile * 10h + OffsetOfKernelFile
-=======
-	call	DispStr			; 显示字符串
-
-	; 下面在 A 盘的根目录寻找 KERNEL.BIN
-	mov	word [wSectorNo], SectorNoOfRootDirectory	
-	xor	ah, ah	; `.
-	xor	dl, dl	;  | 软驱复位
-	int	13h	; /
-LABEL_SEARCH_IN_ROOT_DIR_BEGIN:
-	cmp	word [wRootDirSizeForLoop], 0	; `.
-	jz	LABEL_NO_KERNELBIN		;  | 判断根目录区是不是已经读完,
-	dec	word [wRootDirSizeForLoop]	; /  读完表示没有找到 KERNEL.BIN
-	mov	ax, BaseOfKernelFile
-	mov	es, ax			; es <- BaseOfKernelFile
-	mov	bx, OffsetOfKernelFile	; bx <- OffsetOfKernelFile
->>>>>>> origin/yuyifan
 	mov	ax, [wSectorNo]		; ax <- Root Directory 中的某 Sector 号
 	mov	cl, 1
 	call	ReadSector
 
 	mov	si, KernelFileName	; ds:si -> "KERNEL  BIN"
-<<<<<<< HEAD
 	mov	di, OffsetOfKernelFile	; es:di -> BaseOfKernelFile:???? = BaseOfKernelFile*10h+????
 	cld
 	mov	dx, 10h
@@ -127,20 +95,6 @@ LABEL_CMP_FILENAME:
 	cmp	cx, 0			; ┓
 	jz	LABEL_FILENAME_FOUND	; ┣ 循环次数控制, 如果比较了 11 个字符都相等, 表示找到
 	dec	cx			; ┛
-=======
-	mov	di, OffsetOfKernelFile
-	cld
-	mov	dx, 10h
-LABEL_SEARCH_FOR_KERNELBIN:
-	cmp	dx, 0				  ; `.
-	jz	LABEL_GOTO_NEXT_SECTOR_IN_ROOT_DIR;  | 循环次数控制, 如果已经读完
-	dec	dx				  ; /  了一个 Sector, 就跳到下一个
-	mov	cx, 11
-LABEL_CMP_FILENAME:
-	cmp	cx, 0			; `.
-	jz	LABEL_FILENAME_FOUND	;  | 循环次数控制, 如果比较了 11 个字符都
-	dec	cx			; /  相等, 表示找到
->>>>>>> origin/yuyifan
 	lodsb				; ds:si -> al
 	cmp	al, byte [es:di]	; if al == es:di
 	jz	LABEL_GO_ON
@@ -150,17 +104,10 @@ LABEL_GO_ON:
 	jmp	LABEL_CMP_FILENAME	;	继续循环
 
 LABEL_DIFFERENT:
-<<<<<<< HEAD
 	and	di, 0FFE0h		; else┓	这时di的值不知道是什么, di &= e0 为了让它是 20h 的倍数
 	add	di, 20h			;     ┃
 	mov	si, KernelFileName	;     ┣ di += 20h  下一个目录条目
 	jmp	LABEL_SEARCH_FOR_KERNELBIN;   ┛
-=======
-	and	di, 0FFE0h		; else`. 让 di 是 20h 的倍数
-	add	di, 20h			;      |
-	mov	si, KernelFileName	;      | di += 20h  下一个目录条目
-	jmp	LABEL_SEARCH_FOR_KERNELBIN;   /
->>>>>>> origin/yuyifan
 
 LABEL_GOTO_NEXT_SECTOR_IN_ROOT_DIR:
 	add	word [wSectorNo], 1
@@ -168,38 +115,22 @@ LABEL_GOTO_NEXT_SECTOR_IN_ROOT_DIR:
 
 LABEL_NO_KERNELBIN:
 	mov	dh, 2			; "No KERNEL."
-<<<<<<< HEAD
 	call	DispStrRealMode		; 显示字符串
 	jmp	$			; 没有找到 KERNEL.BIN, 死循环在这里
-=======
-	call	DispStr			; 显示字符串
-%ifdef	_LOADER_DEBUG_
-	mov	ax, 4c00h		; `.
-	int	21h			; / 没有找到 KERNEL.BIN, 回到 DOS
-%else
-	jmp	$			; 没有找到 KERNEL.BIN, 死循环在这里
-%endif
->>>>>>> origin/yuyifan
 
 LABEL_FILENAME_FOUND:			; 找到 KERNEL.BIN 后便来到这里继续
 	mov	ax, RootDirSectors
 	and	di, 0FFF0h		; di -> 当前条目的开始
 
 	push	eax
-<<<<<<< HEAD
 	mov	eax, [es : di + 01Ch]		; ┓
 	mov	dword [dwKernelSize], eax	; ┛保存 KERNEL.BIN 文件大小
-=======
-	mov	eax, [es : di + 01Ch]		; `.
-	mov	dword [dwKernelSize], eax	; / 保存 KERNEL.BIN 文件大小
->>>>>>> origin/yuyifan
 	pop	eax
 
 	add	di, 01Ah		; di -> 首 Sector
 	mov	cx, word [es:di]
 	push	cx			; 保存此 Sector 在 FAT 中的序号
 	add	cx, ax
-<<<<<<< HEAD
 	add	cx, DeltaSectorNo	; 这时 cl 里面是 LOADER.BIN 的起始扇区号 (从 0 开始数的序号)
 	mov	ax, BaseOfKernelFile
 	mov	es, ax			; es <- BaseOfKernelFile
@@ -215,23 +146,6 @@ LABEL_GOON_LOADING_FILE:
 	int	10h			; ┃
 	pop	bx			; ┃
 	pop	ax			; ┛
-=======
-	add	cx, DeltaSectorNo	; cl <- KERNEL.BIN 的起始扇区号(0-based)
-	mov	ax, BaseOfKernelFile
-	mov	es, ax			; es <- BaseOfKernelFile
-	mov	bx, OffsetOfKernelFile	; bx <- OffsetOfKernelFile
-	mov	ax, cx			; ax <- Sector 号
-
-LABEL_GOON_LOADING_FILE:
-	push	ax			; `.
-	push	bx			;  |
-	mov	ah, 0Eh			;  | 每读一个扇区就在 "Loading  " 后面
-	mov	al, '.'			;  | 打一个点, 形成这样的效果:
-	mov	bl, 0Fh			;  | Loading ......
-	int	10h			;  |
-	pop	bx			;  |
-	pop	ax			; /
->>>>>>> origin/yuyifan
 
 	mov	cl, 1
 	call	ReadSector
@@ -250,7 +164,6 @@ LABEL_FILE_LOADED:
 	call	KillMotor		; 关闭软驱马达
 
 	mov	dh, 1			; "Ready."
-<<<<<<< HEAD
 	call	DispStrRealMode		; 显示字符串
 	
 ; 下面准备跳入保护模式 -------------------------------------------
@@ -273,11 +186,6 @@ LABEL_FILE_LOADED:
 
 ; 真正进入保护模式
 	jmp	dword SelectorFlatC:(BaseOfLoaderPhyAddr+LABEL_PM_START)
-=======
-	call	DispStr			; 显示字符串
-
-	jmp	$
->>>>>>> origin/yuyifan
 
 
 ;============================================================================
@@ -300,7 +208,6 @@ Message2		db	"No KERNEL"
 ;============================================================================
 
 ;----------------------------------------------------------------------------
-<<<<<<< HEAD
 ; 函数名: DispStrRealMode
 ;----------------------------------------------------------------------------
 ; 运行环境:
@@ -308,13 +215,6 @@ Message2		db	"No KERNEL"
 ; 作用:
 ;	显示一个字符串, 函数开始时 dh 中应该是字符串序号(0-based)
 DispStrRealMode:
-=======
-; 函数名: DispStr
-;----------------------------------------------------------------------------
-; 作用:
-;	显示一个字符串, 函数开始时 dh 中应该是字符串序号(0-based)
-DispStr:
->>>>>>> origin/yuyifan
 	mov	ax, MessageLength
 	mul	dh
 	add	ax, LoadMessage
@@ -434,7 +334,6 @@ KillMotor:
 	ret
 ;----------------------------------------------------------------------------
 
-<<<<<<< HEAD
 
 ; 从此以后的代码在保护模式下执行 ----------------------------------------------------
 ; 32 位代码段. 由实模式跳入 ---------------------------------------------------------
@@ -886,5 +785,3 @@ StackSpace:	times	1000h	db	0
 TopOfStack	equ	BaseOfLoaderPhyAddr + $	; 栈顶
 ; SECTION .data1 之结束 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-=======
->>>>>>> origin/yuyifan
