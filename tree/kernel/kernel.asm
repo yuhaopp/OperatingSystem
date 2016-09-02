@@ -13,6 +13,9 @@ extern	cstart
 extern	kernel_main
 extern	exception_handler
 extern	spurious_irq
+extern	clock_handler
+extern	disp_str
+extern	delay
 
 ; 导入全局变量
 extern	gdt_ptr
@@ -20,8 +23,12 @@ extern	idt_ptr
 extern	p_proc_ready
 extern	tss
 extern	disp_pos
+extern	k_reenter
 
 bits 32
+
+[SECTION .data]
+clock_int_msg		db	"^", 0
 
 [SECTION .bss]
 StackSpace		resb	2 * 1024
@@ -149,6 +156,49 @@ csinit:		; “这个跳转指令强制使用刚刚初始化的结构”——<<O
 
 ALIGN	16
 hwint00:		; Interrupt routine for irq 0 (the clock).
+	sub	esp, 4
+	pushad		; `.
+	push	ds	;  |
+	push	es	;  | 保存原寄存器值
+	push	fs	;  |
+	push	gs	; /
+	mov	dx, ss
+	mov	ds, dx
+	mov	es, dx
+
+	inc	byte [gs:0]		; 改变屏幕第 0 行, 第 0 列的字符
+
+	mov	al, EOI			; `. reenable
+	out	INT_M_CTL, al		; /  master 8259
+
+	inc	dword [k_reenter]
+	cmp	dword [k_reenter], 0
+	jne	.re_enter
+	
+	mov	esp, StackTop		; 切到内核栈
+
+	sti
+	
+	push	0
+	call	clock_handler
+	add	esp, 4
+	
+	cli
+	
+	mov	esp, [p_proc_ready]	; 离开内核栈
+	lldt	[esp + P_LDT_SEL]
+	lea	eax, [esp + P_STACKTOP]
+	mov	dword [tss + TSS3_S_SP0], eax
+
+.re_enter:	; 如果(k_reenter != 0)，会跳转到这里
+	dec	dword [k_reenter]
+	pop	gs	; `.
+	pop	fs	;  |
+	pop	es	;  | 恢复原寄存器值
+	pop	ds	;  |
+	popad		; /
+	add	esp, 4
+
 	iretd
 
 ALIGN	16
@@ -296,14 +346,11 @@ restart:
 	lldt	[esp + P_LDT_SEL] 
 	lea	eax, [esp + P_STACKTOP]
 	mov	dword [tss + TSS3_S_SP0], eax
-
 	pop	gs
 	pop	fs
 	pop	es
 	pop	ds
 	popad
-
 	add	esp, 4
-
 	iretd
 

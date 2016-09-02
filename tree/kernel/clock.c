@@ -1,24 +1,26 @@
 
 /*++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-                            global.c
+                               clock.c
 ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
                                                     Forrest Yu, 2005
 ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++*/
-
-#define GLOBAL_VARIABLES_HERE
 
 #include "type.h"
 #include "const.h"
 #include "protect.h"
 #include "proto.h"
+#include "string.h"
 #include "proc.h"
 #include "global.h"
 
 
-PUBLIC	PROCESS			proc_table[NR_TASKS];
-
-PUBLIC	char			task_stack[STACK_SIZE_TOTAL];
-
-PUBLIC	TASK	task_table[NR_TASKS] = {{TestA, STACK_SIZE_TESTA, "TestA"},
-					{TestB, STACK_SIZE_TESTB, "TestB"}};
-
+/*======================================================================*
+                           clock_handler
+ *======================================================================*/
+PUBLIC void clock_handler(int irq)
+{
+	disp_str("#");
+	p_proc_ready++;
+	if (p_proc_ready >= proc_table + NR_TASKS)
+		p_proc_ready = proc_table;
+}

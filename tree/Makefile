@@ -17,14 +17,14 @@ CC		= gcc
 LD		= ld
 ASMBFLAGS	= -I boot/include/
 ASMKFLAGS	= -I include/ -f elf
-CFLAGS		= -I include/ -c -fno-builtin -fno-stack-protector -m32
+CFLAGS		= -I include/ -c -fno-builtin -m32 -fno-stack-protector
 LDFLAGS		= -s -m elf_i386 -Ttext $(ENTRYPOINT)
 DASMFLAGS	= -u -o $(ENTRYPOINT) -e $(ENTRYOFFSET)
 
 # This Program
 ORANGESBOOT	= boot/boot.bin boot/loader.bin
 ORANGESKERNEL	= kernel.bin
-OBJS		= kernel/kernel.o kernel/start.o kernel/main.o\
+OBJS		= kernel/kernel.o kernel/start.o kernel/main.o kernel/clock.o\
 			kernel/i8259.o kernel/global.o kernel/protect.o\
 			lib/kliba.o lib/klib.o lib/string.o
 DASMOUTPUT	= kernel.bin.asm
@@ -37,9 +37,7 @@ everything : $(ORANGESBOOT) $(ORANGESKERNEL)
 
 all : realclean everything
 
-final : all clean
-
-image : final buildimg
+image : realclean everything clean buildimg
 
 clean :
 	rm -f $(OBJS)
@@ -53,10 +51,10 @@ disasm :
 # We assume that "a.img" exists in current folder
 buildimg :
 	dd if=boot/boot.bin of=a.img bs=512 count=1 conv=notrunc
-	sudo mount -o loop a.img /home/yuyifan/mnt/floppy/
-	sudo cp boot/loader.bin /home/yuyifan/mnt/floppy/ -v
-	sudo cp kernel.bin /home/yuyifan/mnt/floppy/ -v
-	sudo umount /home/yuyifan/mnt/floppy
+	sudo mount -o loop a.img mnt/floppy/
+	sudo cp -v boot/loader.bin mnt/floppy/
+	sudo cp -v kernel.bin mnt/floppy/
+	sudo umount mnt/floppy
 
 boot/boot.bin : boot/boot.asm boot/include/load.inc boot/include/fat12hdr.inc
 	$(ASM) $(ASMBFLAGS) -o $@ $<
@@ -76,6 +74,9 @@ kernel/start.o: kernel/start.c include/type.h include/const.h include/protect.h 
 
 kernel/main.o: kernel/main.c include/type.h include/const.h include/protect.h include/string.h include/proc.h include/proto.h \
 			include/global.h
+	$(CC) $(CFLAGS) -o $@ $<
+
+kernel/clock.o: kernel/clock.c
 	$(CC) $(CFLAGS) -o $@ $<
 
 kernel/i8259.o: kernel/i8259.c include/type.h include/const.h include/protect.h include/proto.h
