@@ -6,16 +6,21 @@
 ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++*/
 
 #include "type.h"
+#include "stdio.h"
 #include "const.h"
 #include "protect.h"
-#include "proto.h"
+#include "fs.h"
+#include "tty.h"
+#include "console.h"
 #include "proc.h"
+#include "string.h"
 #include "global.h"
+#include "proto.h"
 
 
 /* 本文件内函数声明 */
 PRIVATE void init_idt_desc(unsigned char vector, u8 desc_type, int_handler handler, unsigned char privilege);
-PRIVATE void init_descriptor(DESCRIPTOR * p_desc, u32 base, u32 limit, u16 attribute);
+PRIVATE void init_descriptor(struct descriptor * p_desc, u32 base, u32 limit, u16 attribute);
 
 
 /* 中断处理函数 */
@@ -62,7 +67,7 @@ PUBLIC void init_prot()
 {
 	init_8259A();
 
-	// 全部初始化成中断门(没有陷阱门)
+	/* 全部初始化成中断门(没有陷阱门) */
 	init_idt_desc(INT_VECTOR_DIVIDE,	DA_386IGate,
 		      divide_error,		PRIVILEGE_KRNL);
 
@@ -162,7 +167,7 @@ PUBLIC void init_prot()
 	init_idt_desc(INT_VECTOR_SYS_CALL,	DA_386IGate,
 		      sys_call,			PRIVILEGE_USER);
 
-	/* 填充 GDT 中 TSS 这个描述符 */
+	/* 填充 GDT 中 tss 这个描述符 */
 	memset(&tss, 0, sizeof(tss));
 	tss.ss0		= SELECTOR_KERNEL_DS;
 	init_descriptor(&gdt[INDEX_TSS],
@@ -171,15 +176,15 @@ PUBLIC void init_prot()
 			DA_386TSS);
 	tss.iobase	= sizeof(tss);	/* 没有I/O许可位图 */
 
-	// 填充 GDT 中进程的 LDT 的描述符
+	/* 填充 GDT 中进程的 LDT 的描述符 */
 	int i;
-	PROCESS* p_proc	= proc_table;
+	struct proc* p_proc = proc_table;
 	u16 selector_ldt = INDEX_LDT_FIRST << 3;
-	for(i=0;i<NR_TASKS;i++){
+	for (i = 0; i < NR_TASKS+NR_PROCS; i++){
 		init_descriptor(&gdt[selector_ldt>>3],
 				vir2phys(seg2phys(SELECTOR_KERNEL_DS),
 					proc_table[i].ldts),
-				LDT_SIZE * sizeof(DESCRIPTOR) - 1,
+				LDT_SIZE * sizeof(struct descriptor) - 1,
 				DA_LDT);
 		p_proc++;
 		selector_ldt += 1 << 3;
@@ -194,8 +199,8 @@ PUBLIC void init_prot()
  *======================================================================*/
 PUBLIC void init_idt_desc(unsigned char vector, u8 desc_type, int_handler handler, unsigned char privilege)
 {
-	GATE *	p_gate	= &idt[vector];
-	u32	base	= (u32)handler;
+	struct gate * p_gate	= &idt[vector];
+	u32 base = (u32)handler;
 	p_gate->offset_low	= base & 0xFFFF;
 	p_gate->selector	= SELECTOR_KERNEL_CS;
 	p_gate->dcount		= 0;
@@ -211,7 +216,7 @@ PUBLIC void init_idt_desc(unsigned char vector, u8 desc_type, int_handler handle
  *======================================================================*/
 PUBLIC u32 seg2phys(u16 seg)
 {
-	DESCRIPTOR* p_dest = &gdt[seg >> 3];
+	struct descriptor* p_dest = &gdt[seg >> 3];
 
 	return (p_dest->base_high << 24) | (p_dest->base_mid << 16) | (p_dest->base_low);
 }
@@ -221,15 +226,15 @@ PUBLIC u32 seg2phys(u16 seg)
  *----------------------------------------------------------------------*
  初始化段描述符
  *======================================================================*/
-PRIVATE void init_descriptor(DESCRIPTOR * p_desc, u32 base, u32 limit, u16 attribute)
+PRIVATE void init_descriptor(struct descriptor * p_desc, u32 base, u32 limit, u16 attribute)
 {
-	p_desc->limit_low		= limit & 0x0FFFF;		// 段界限 1		(2 字节)
-	p_desc->base_low		= base & 0x0FFFF;		// 段基址 1		(2 字节)
-	p_desc->base_mid		= (base >> 16) & 0x0FF;		// 段基址 2		(1 字节)
-	p_desc->attr1			= attribute & 0xFF;		// 属性 1
-	p_desc->limit_high_attr2	= ((limit >> 16) & 0x0F) |
-						(attribute >> 8) & 0xF0;// 段界限 2 + 属性 2
-	p_desc->base_high		= (base >> 24) & 0x0FF;		// 段基址 3		(1 字节)
+	p_desc->limit_low	= limit & 0x0FFFF;		/* 段界限 1		(2 字节) */
+	p_desc->base_low	= base & 0x0FFFF;		/* 段基址 1		(2 字节) */
+	p_desc->base_mid	= (base >> 16) & 0x0FF;		/* 段基址 2		(1 字节) */
+	p_desc->attr1		= attribute & 0xFF;		/* 属性 1 */
+	p_desc->limit_high_attr2= ((limit >> 16) & 0x0F) |
+				  ((attribute >> 8) & 0xF0);	/* 段界限 2 + 属性 2 */
+	p_desc->base_high	= (base >> 24) & 0x0FF;		/* 段基址 3		(1 字节) */
 }
 
 /*======================================================================*

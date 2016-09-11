@@ -202,10 +202,23 @@ hwint07:		; Interrupt routine for irq 7 (printer)
 
 ; ---------------------------------
 %macro	hwint_slave	1
-	push	%1
-	call	spurious_irq
-	add	esp, 4
-	hlt
+	call	save
+	in	al, INT_S_CTLMASK	; `.
+	or	al, (1 << (%1 - 8))	;  | 屏蔽当前中断
+	out	INT_S_CTLMASK, al	; /
+	mov	al, EOI			; `. 置EOI位(master)
+	out	INT_M_CTL, al		; /
+	nop				; `. 置EOI位(slave)
+	out	INT_S_CTL, al		; /  一定注意：slave和master都要置EOI
+	sti	; CPU在响应中断的过程中会自动关中断，这句之后就允许响应新的中断
+	push	%1			; `.
+	call	[irq_table + 4 * %1]	;  | 中断处理程序
+	pop	ecx			; /
+	cli
+	in	al, INT_S_CTLMASK	; `.
+	and	al, ~(1 << (%1 - 8))	;  | 恢复接受当前中断
+	out	INT_S_CTLMASK, al	; /
+	ret
 %endmacro
 ; ---------------------------------
 
@@ -308,18 +321,27 @@ exception:
 	add	esp, 4*2	; 让栈顶指向 EIP，堆栈中从顶向下依次是：EIP、CS、EFLAGS
 	hlt
 
-; ====================================================================================
+; =============================================================================
 ;                                   save
-; ====================================================================================
+; =============================================================================
 save:
         pushad          ; `.
         push    ds      ;  |
         push    es      ;  | 保存原寄存器值
         push    fs      ;  |
         push    gs      ; /
-        mov     dx, ss
-        mov     ds, dx
-        mov     es, dx
+
+	;; 注意，从这里开始，一直到 `mov esp, StackTop'，中间坚决不能用 push/pop 指令，
+	;; 因为当前 esp 指向 proc_table 里的某个位置，push 会破坏掉进程表，导致灾难性后果！
+
+	mov	esi, edx	; 保存 edx，因为 edx 里保存了系统调用的参数
+				;（没用栈，而是用了另一个寄存器 esi）
+	mov	dx, ss
+	mov	ds, dx
+	mov	es, dx
+	mov	fs, dx
+
+	mov	edx, esi	; 恢复 edx
 
         mov     esi, esp                    ;esi = 进程表起始地址
 
@@ -335,28 +357,35 @@ save:
                                             ;}
 
 
-; ====================================================================================
+; =============================================================================
 ;                                 sys_call
-; ====================================================================================
+; =============================================================================
 sys_call:
         call    save
 
         sti
+	push	esi
 
+	push	dword [p_proc_ready]
+	push	edx
+	push	ecx
+	push	ebx
         call    [sys_call_table + eax * 4]
-        mov     [esi + EAXREG - P_STACKBASE], eax
+	add	esp, 4 * 4
 
+	pop	esi
+        mov     [esi + EAXREG - P_STACKBASE], eax
         cli
 
         ret
 
 
 ; ====================================================================================
-;				    restart
+;                                   restart
 ; ====================================================================================
 restart:
 	mov	esp, [p_proc_ready]
-	lldt	[esp + P_LDT_SEL]
+	lldt	[esp + P_LDT_SEL] 
 	lea	eax, [esp + P_STACKTOP]
 	mov	dword [tss + TSS3_S_SP0], eax
 restart_reenter:
